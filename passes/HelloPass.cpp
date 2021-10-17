@@ -1,6 +1,8 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -42,22 +44,101 @@ namespace {
 					size_t numops = instr.getNumOperands();
 					errs() << "\t\t" << instr.getOpcodeName() << "\n";
 
+					switch (instr.getOpcode()) {
+						// Group Add, Sub and Mul as arithmetic instructions
+						case Instruction::Add:
+						case Instruction::Sub:
+						case Instruction::Mul:
+							errs() << "\t\tArithmetic Instruction\n";
+							break;
+						// Group load store that deal with variables and memory
+						case Instruction::Load:
+						case Instruction::Store:
+							errs() << "\t\tLoad/Store instructions, interacts with variables memeory\n";
+							break;
+						// Function calls
+						case Instruction::Call:
+							errs() << "\t\tFunction call\n";
+							errs() << "\t\tCalling: ";
+							instr.getOperand(numops - 1)->printAsOperand(errs(), false);
+							errs() << "\n";
+							break;
+						// Branch instructions
+						case Instruction::Br:
+							errs() << "\t\tBranch Instruction\n";
+							break;
+						// And/Or/Xor boolean logic
+						case Instruction::And:
+						case Instruction::Or:
+						case Instruction::Xor:
+							errs() << "\t\tLogical (Boolean AND/OR/XOR) Instruction\n";
+							break;
+						// Alloca allocates storage
+						case Instruction::Alloca:
+							errs() << "\t\tAllocate instruction: asks compiler to ask OS to reserve memory\n";
+							break;
+						// Return 
+						case Instruction::Ret:
+							errs() << "\t\tReturns from a function\n";
+							break;
+						// Comparison instruction
+						case Instruction::ICmp:
+							errs() << "\t\tComparison instruction\n";
+							CmpInst* ci = dyn_cast<CmpInst>(&instr);
+							// TODO: simplify ugly switch case if possible?
+							switch (ci->getPredicate()) {
+								case CmpInst::ICMP_EQ:
+									errs() << "\t\tComparing for equality\n";
+									break;
+								case CmpInst::ICMP_NE:
+									errs() << "\t\tComparing for not equality\n";
+									break;
+								case CmpInst::ICMP_SGE:
+								case CmpInst::ICMP_UGE:
+									errs() << "\t\tComparing Greater Than Equals\n";
+									break;
+								case CmpInst::ICMP_ULE:
+								case CmpInst::ICMP_SLE:
+									errs() << "\t\tComparing Less Than Equals\n";
+									break;
+								case CmpInst::ICMP_SLT:
+								case CmpInst::ICMP_ULT:
+									errs() << "\t\tComparing Less Than\n";
+									break;
+								case CmpInst::ICMP_SGT:
+								case CmpInst::ICMP_UGT:
+									errs() << "\t\tComparing Greater Than\n";
+									break;
+								default:
+									errs() << "\t\tA kind of comparison Idon't know about\n";
+									break;
+							}
+							break;
+					}
+
 					// Check if the  instrruction returns something
 					// if it does there might be an LHS
 					if (!instr.getType()->isVoidTy()) {
+						errs() << "\t\tThis statement is also an assignment since it is of the form (\%a = <instr> %b \%c)\n";
 						errs() << "\t\t\t[LHS] %" << bbno + lvalue_counter << "\n";
 					}
+					// Iterate over the rest of the operands to get the RHS
 					for (size_t i = 0; i < numops; i++) {
 						errs() << "\t\t\t[RHS] ";
 						errs() << "Operand " << i << ": ";
 						instr.getOperand(i)->printAsOperand(errs(), false);
 						errs() << "\n";
 					}
+					// Increment the lvalue counter of instructions that return an lvalue
+					// We need to do this since the lvalues of IR instructions are generated on the fly
+					// Meaning they don't actually ecist as named values but as intermediaries for the compiler
+					// LLVM stores no record of these values so we have to generate them
 					if (!instr.getType()->isVoidTy()) {
 						lvalue_counter += 1;
 					}
 				}
 			}
+			// Did we modify the source?
 			return false;
 		}
 	};
