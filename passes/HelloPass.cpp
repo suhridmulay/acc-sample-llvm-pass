@@ -42,20 +42,29 @@ namespace {
 				// Iterate over all instructions in the basic block
 				for (llvm::Instruction &instr: bb) {
 					size_t numops = instr.getNumOperands();
-					errs() << "\t\t" << instr.getOpcodeName() << "\n";
 
+					std::string instruction_line;
+					llvm::raw_string_ostream rso(instruction_line);
+					rso << instr;
+					errs() << "\t\tInstruction:" << instruction_line << "\n";
+
+					errs() << "\t\tOpCode: " << instr.getOpcodeName() << "\n";
+					// TODO: Is there a way to do this more elegantly?
 					switch (instr.getOpcode()) {
+
 						// Group Add, Sub and Mul as arithmetic instructions
 						case Instruction::Add:
 						case Instruction::Sub:
 						case Instruction::Mul:
 							errs() << "\t\tArithmetic Instruction\n";
 							break;
-						// Group load store that deal with variables and memory
+
+						// Group load Store as instructions that deal with variables and memory
 						case Instruction::Load:
 						case Instruction::Store:
 							errs() << "\t\tLoad/Store instructions, interacts with variables memeory\n";
 							break;
+						
 						// Function calls
 						case Instruction::Call:
 							errs() << "\t\tFunction call\n";
@@ -63,30 +72,35 @@ namespace {
 							instr.getOperand(numops - 1)->printAsOperand(errs(), false);
 							errs() << "\n";
 							break;
+						
 						// Branch instructions
 						case Instruction::Br:
 							errs() << "\t\tBranch Instruction\n";
 							break;
+						
 						// And/Or/Xor boolean logic
 						case Instruction::And:
 						case Instruction::Or:
 						case Instruction::Xor:
 							errs() << "\t\tLogical (Boolean AND/OR/XOR) Instruction\n";
 							break;
+						
 						// Alloca allocates storage
 						case Instruction::Alloca:
 							errs() << "\t\tAllocate instruction: asks compiler to ask OS to reserve memory\n";
 							break;
+						
 						// Return 
 						case Instruction::Ret:
 							errs() << "\t\tReturns from a function\n";
 							break;
+						
 						// Comparison instruction
-						case Instruction::ICmp:
+						case Instruction::ICmp: {
 							errs() << "\t\tComparison instruction\n";
-							CmpInst* ci = dyn_cast<CmpInst>(&instr);
+							CmpInst* cii = dyn_cast<CmpInst>(&instr);
 							// TODO: simplify ugly switch case if possible?
-							switch (ci->getPredicate()) {
+							switch (cii->getPredicate()) {
 								case CmpInst::ICMP_EQ:
 									errs() << "\t\tComparing for equality\n";
 									break;
@@ -114,6 +128,25 @@ namespace {
 									break;
 							}
 							break;
+						}
+
+						// Floating point arithmetic
+						case Instruction::FAdd:
+						case Instruction::FMul:
+						case Instruction::FSub:
+						case Instruction::FDiv: {
+							errs() << "\t\tFloating point arithmetic\n";
+							break;
+						}
+
+						// Floating point compares
+						case Instruction::FCmp: {
+							errs() << "\t\tFloating point comparison\t";
+							CmpInst* cif = dyn_cast<CmpInst>(&instr);
+							errs() << "\t\tComparison Type: " << CmpInst::getPredicateName(cif->getPredicate()).str() << "\n";
+							break;
+						}
+
 					}
 
 					// Check if the  instrruction returns something
