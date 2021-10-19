@@ -36,13 +36,14 @@ make test
 
 This will recompile the pass (if necessary) and then run it on the generated IRs, the output is printed to the console and for each instruction the output specifies the following parameters:
 
-When done if we want to cleanup the generated files we simply run:
-```shell
-make clean
-```
-
 1. Instruction statement
 2. OpCode of the instruction
 3. The kind of instruction (if categorisation is implemented)
 4. Whether the instruction is of assignment form
 5. Followed by a list of operands starting from the lvalue
+
+
+When done if we want to cleanup the generated files we simply run:
+```shell
+make clean
+```
