@@ -18,6 +18,11 @@ namespace {
 			// Log the function name to stderr
 			errs() << "Analysing Function: " << F.getName() << "\n";
 
+			// Counter for instructions
+			size_t icounter = 0;
+			// Counter for basic blocks
+			size_t bbc = 0;
+
 			// Iterate over all basic blocks
 			for (llvm::BasicBlock &bb: F) {
 				// Lvalue counter for within basic blocks
@@ -37,7 +42,7 @@ namespace {
 				size_t bbno = std::stoi(temp.erase(0, 1));
 
 				// Logging out the basic block number
-				errs() << "\tBasic Block: " << bbno << "\n";
+				errs() << "\tBasic Block: " << "(" << bbc << ")" << bbno << "\n";
 
 				// Iterate over all instructions in the basic block
 				for (llvm::Instruction &instr: bb) {
@@ -46,7 +51,7 @@ namespace {
 					std::string instruction_line;
 					llvm::raw_string_ostream rso(instruction_line);
 					rso << instr;
-					errs() << "\t\tInstruction:" << instruction_line << "\n";
+					errs() << "\t\tInstruction " << icounter << ":" << instruction_line << "\n";
 
 					errs() << "\t\tOpCode: " << instr.getOpcodeName() << "\n";
 					// TODO: Is there a way to do this more elegantly?
@@ -141,7 +146,7 @@ namespace {
 
 						// Floating point compares
 						case Instruction::FCmp: {
-							errs() << "\t\tFloating point comparison\t";
+							errs() << "\t\tFloating point comparison\n";
 							CmpInst* cif = dyn_cast<CmpInst>(&instr);
 							errs() << "\t\tComparison Type: " << CmpInst::getPredicateName(cif->getPredicate()).str() << "\n";
 							break;
@@ -155,6 +160,7 @@ namespace {
 						errs() << "\t\tThis statement is also an assignment since it is of the form (\%a = <instr> %b \%c)\n";
 						errs() << "\t\t\t[LHS] %" << bbno + lvalue_counter << "\n";
 					}
+
 					// Iterate over the rest of the operands to get the RHS
 					for (size_t i = 0; i < numops; i++) {
 						errs() << "\t\t\t[RHS] ";
@@ -162,6 +168,7 @@ namespace {
 						instr.getOperand(i)->printAsOperand(errs(), false);
 						errs() << "\n";
 					}
+
 					// Increment the lvalue counter of instructions that return an lvalue
 					// We need to do this since the lvalues of IR instructions are generated on the fly
 					// Meaning they don't actually ecist as named values but as intermediaries for the compiler
@@ -169,8 +176,17 @@ namespace {
 					if (!instr.getType()->isVoidTy()) {
 						lvalue_counter += 1;
 					}
+					icounter += 1;
+					errs() << "\n";
 				}
+
+				// Increment basic block count
+				bbc += 1;
 			}
+			// Log out some stats
+			errs() << "Completed analysis of " << F.getName() << "\n";
+			errs() << "Iterated over " << icounter << " instruction is " << bbc << "basic blocks\n";
+			
 			// Did we modify the source?
 			return false;
 		}
